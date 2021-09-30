@@ -3,6 +3,7 @@ import Beethoven
 import Pitchy
 import Hue
 import Cartography
+import AVFoundation
 
 final class ViewController: UIViewController {
   lazy var noteLabel: UILabel = {
@@ -40,12 +41,8 @@ final class ViewController: UIViewController {
     return button
   }()
 
-  lazy var pitchEngine: PitchEngine = { [weak self] in
-    let config = Config(estimationStrategy: .yin)
-    let pitchEngine = PitchEngine(config: config, delegate: self)
-    pitchEngine.levelThreshold = -30.0
-    return pitchEngine
-  }()
+  lazy var pitchEngine = PitchDetectorEngine()
+  var isRecording = false
 
   // MARK: - View Lifecycle
 
@@ -65,18 +62,67 @@ final class ViewController: UIViewController {
   // MARK: - Action methods
 
   @objc func actionButtonDidPress(_ button: UIButton) {
-    let text = pitchEngine.active
+    let text = isRecording
       ? NSLocalizedString("Start", comment: "").uppercased()
       : NSLocalizedString("Stop", comment: "").uppercased()
 
     button.setTitle(text, for: .normal)
-    button.backgroundColor = pitchEngine.active
+    button.backgroundColor = isRecording
       ? UIColor(hex: "3DAFAE")
       : UIColor(hex: "E13C6C")
 
     noteLabel.text = "--"
-    pitchEngine.active ? pitchEngine.stop() : pitchEngine.start()
-    offsetLabel.isHidden = !pitchEngine.active
+    if (isRecording) {
+      pitchEngine.stopRecording()
+      isRecording = false
+      offsetLabel.isHidden = true
+    } else {
+      tryToStartRecording {
+        self.isRecording = true
+        DispatchQueue.main.async {
+          self.offsetLabel.isHidden = false
+        }
+      }
+    }
+  }
+  
+  func tryToStartRecording(onStart: @escaping () -> ()) {
+    func startRecording() {
+      if (!pitchEngine.prepare()) {
+        return
+      }
+      pitchEngine.startRecording(onMidiNumberDetected: self.pitchEngine)
+      onStart();
+    }
+    
+    func showPermissionsNeededAlert() {
+      let alert = UIAlertController(title: "Permissions denied", message: "Please go to settings to enable permissions", preferredStyle: .alert)
+      alert.addAction(UIAlertAction(title: "Go there", style: .default) {_ in
+                        UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!)})
+      alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+      DispatchQueue.main.async {
+        self.present(alert, animated: true)
+      }
+    }
+    
+    let audioSession = AVAudioSession.sharedInstance()
+    
+    switch audioSession.recordPermission {
+    case .granted:
+      startRecording()
+    case .denied:
+      showPermissionsNeededAlert()
+    case .undetermined:
+      audioSession.requestRecordPermission { granted in
+        if (granted) {
+          startRecording()
+        } else {
+          showPermissionsNeededAlert()
+        }
+      }
+    @unknown default:
+      fatalError("Unknown value of AudioSession.recordPermission")
+    }
   }
 
   // MARK: - Layout
@@ -126,32 +172,23 @@ final class ViewController: UIViewController {
 
 // MARK: - PitchEngineDelegate
 
-extension ViewController: PitchEngineDelegate {
-  func pitchEngine(_ pitchEngine: PitchEngine, didReceivePitch pitch: Pitch) {
-    noteLabel.text = pitch.note.string
+extension ViewController {
+  func pitchEngine(midiNumber: Int) {
+    let pitch = try! Pitch(frequency: Note(index: midiNumber - 69).frequency)
 
     let offsetPercentage = pitch.closestOffset.percentage
     let absOffsetPercentage = abs(offsetPercentage)
 
     print("pitch : \(pitch.note.string) - percentage : \(offsetPercentage)")
 
-    guard absOffsetPercentage > 1.0 else {
-      return
-    }
-
     let prefix = offsetPercentage > 0 ? "+" : "-"
     let color = offsetColor(offsetPercentage)
 
-    offsetLabel.text = "\(prefix)" + String(format:"%.2f", absOffsetPercentage) + "%"
-    offsetLabel.textColor = color
-    offsetLabel.isHidden = false
-  }
-
-  func pitchEngine(_ pitchEngine: PitchEngine, didReceiveError error: Error) {
-    print(error)
-  }
-
-  public func pitchEngineWentBelowLevelThreshold(_ pitchEngine: PitchEngine) {
-    print("Below level threshold")
+    DispatchQueue.main.async {
+      self.noteLabel.text = pitch.note.string
+      self.offsetLabel.text = "\(prefix)" + String(format:"%.2f", absOffsetPercentage) + "%"
+      self.offsetLabel.textColor = color
+      self.offsetLabel.isHidden = false
+    }
   }
 }

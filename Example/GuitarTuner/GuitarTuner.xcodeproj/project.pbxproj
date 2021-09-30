@@ -148,7 +148,7 @@
 				TargetAttributes = {
 					D57D40FC1BE95A350026B005 = {
 						CreatedOnToolsVersion = 7.0.1;
-						DevelopmentTeam = KMUT74CVY5;
+						DevelopmentTeam = 2CAD459LPU;
 						LastSwiftMigration = 0900;
 					};
 				};
@@ -397,7 +397,7 @@
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				DEVELOPMENT_TEAM = KMUT74CVY5;
+				DEVELOPMENT_TEAM = 2CAD459LPU;
 				INFOPLIST_FILE = "$(SRCROOT)/GuitarTuner/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.vadymmarkov.GuitarTuner;
@@ -413,7 +413,7 @@
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				DEVELOPMENT_TEAM = 4C97DN55EV;
+				DEVELOPMENT_TEAM = 2CAD459LPU;
 				INFOPLIST_FILE = "$(SRCROOT)/GuitarTuner/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.vadymmarkov.GuitarTuner;
